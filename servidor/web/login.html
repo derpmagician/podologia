@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ingreso — Clínica Podológica</title>
+  <link rel="stylesheet" href="/estatico/css/estilos.css" />
+</head>
+<body>
+  <div class="login-wrap">
+    <form class="login-card" id="formulario" autocomplete="on">
+      <h1>Clínica Podológica</h1>
+      <p class="sub">Sistema de gestión clínica — acceso restringido</p>
+
+      <div id="aviso"></div>
+
+      <div class="field">
+        <label for="usuario">Usuario</label>
+        <input id="usuario" name="usuario" autocomplete="username" autofocus required />
+      </div>
+
+      <div class="field">
+        <label for="clave">Contraseña</label>
+        <input id="clave" name="clave" type="password" autocomplete="current-password" required />
+      </div>
+
+      <button class="btn btn-primary" type="submit" id="entrar">Ingresar</button>
+
+      <div class="login-pie">
+        <strong>Roles del sistema</strong><br />
+        Administrador: control total, reportes y auditoría.<br />
+        Recepcionista: clientes, citas, boletas y pagos.<br />
+        Podólogo: atenciones, tratamientos y consumos.
+      </div>
+    </form>
+  </div>
+  <script type="module" src="/estatico/js/login.js"></script>
+</body>
+</html>

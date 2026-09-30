@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(python -c \"import zipfile,re,sys; z=zipfile.ZipFile(r'PodologiaClinicaV3.docx'); x=z.read('word/document.xml').decode('utf-8'); t=re.sub(r'<w:p[ >]', '\\n<w:p ', x); t=re.sub(r'<[^>]+>','',t); t=re.sub(r'\\n{2,}','\\n',t); print(t[:6000])\")",
+      "Shell(python -c \" import zipfile,re z=zipfile.ZipFile(r'PodologiaClinicaV3.docx') x=z.read('word/document.xml').decode('utf-8') t=re.sub(r'<w:p[ >]', '\\n<w:p ', x) t=re.sub(r'<[^>]+>','',t) t=re.sub(r'\\n{2,}','\\n',t) i=t.find('Reglas del Negocio') print(t[i:i+4500]) \")",
+      "Shell(python -c \" import zipfile,re z=zipfile.ZipFile(r'PodologiaClinicaV3.docx') x=z.read('word/document.xml').decode('utf-8') t=re.sub(r'<w:p[ >]', '\\n<w:p ', x) t=re.sub(r'<[^>]+>','',t) t=re.sub(r'\\n{2,}','\\n',t) i=t.find('POL') print(t[i-3500:i+2500]) \")",
+      "Shell(python \"C:\\Users\\USER\\AppData\\Local\\Temp\\commandcode\\C--upn-podologia-nuevopodologia\\6b2dce6e-0809-467a-a2f0-97e7b29a73a8\\scratchpad\\extraer.py\")",
+      "Shell(python \"C:\\Users\\USER\\AppData\\Local\\Temp\\commandcode\\C--upn-podologia-nuevopodologia\\6b2dce6e-0809-467a-a2f0-97e7b29a73a8\\scratchpad\\extraer2.py\")",
+      "powershell",
+      "Shell(python servidor/main.py)",
+      "Shell(python \"C:\\Users\\USER\\AppData\\Local\\Temp\\commandcode\\C--upn-podologia-nuevopodologia\\6b2dce6e-0809-467a-a2f0-97e7b29a73a8\\scratchpad\\probar-esquema.py\")",
+      "Shell(python -c \" import pyodbc cn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost;DATABASE=master;TrustServerCertificate=yes;Trusted_Connection=yes;', autocommit=True) cur = cn.cursor() cur.execute(\\\"SELECT CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS NVARCHAR(400)), CAST(SERVERPROPERTY('InstanceDefaultLogPath') AS NVARCHAR(400))\\\") d, l = cur.fetchone() print('DataPath:', repr(d)) print('LogPath :', repr(l)) cn.close() \")",
+      "Shell(python \"C:\\Users\\USER\\AppData\\Local\\Temp\\commandcode\\C--upn-podologia-nuevopodologia\\6b2dce6e-0809-467a-a2f0-97e7b29a73a8\\scratchpad\\rutas-sql.py\")",
+      "Shell(python \"C:\\Users\\USER\\AppData\\Local\\Temp\\commandcode\\C--upn-podologia-nuevopodologia\\6b2dce6e-0809-467a-a2f0-97e7b29a73a8\\scratchpad\\verificar-real.py\")",
+      "Shell(python \"C:\\Users\\USER\\AppData\\Local\\Temp\\commandcode\\C--upn-podologia-nuevopodologia\\6b2dce6e-0809-467a-a2f0-97e7b29a73a8\\scratchpad\\probar-demo.py\")",
+      "Shell(python \"C:\\Users\\USER\\AppData\\Local\\Temp\\commandcode\\C--upn-podologia-nuevopodologia\\6b2dce6e-0809-467a-a2f0-97e7b29a73a8\\scratchpad\\estado-final.py\")"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

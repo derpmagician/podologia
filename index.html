@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clínica Podológica — Gestión clínica</title>
+  <link rel="stylesheet" href="/estatico/css/estilos.css" />
+</head>
+<body>
+  <header class="app">
+    <div>
+      <h1>Clínica Podológica</h1>
+      <p>Base de datos <strong>SQLData_ClinicaPodologicaV2</strong> en SQL Server</p>
+    </div>
+    <div class="usuario">
+      <div class="chip" id="chip-usuario">Cargando…</div>
+      <button class="btn-salir" onclick="app.salir()">Salir</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" style="padding: 12px 28px; background:#0b5f6b;"></nav>
+
+  <main>
+    <!-- ============================ RESUMEN ============================ -->
+    <section id="tab-resumen" class="hidden">
+      <div class="grid-cards" id="res-kpis"></div>
+      <div class="panel">
+        <h2>Agenda de hoy <span class="muted" id="res-fecha"></span></h2>
+        <div class="table-wrap" id="res-agenda"></div>
+      </div>
+      <div class="panel">
+        <h2>Últimas atenciones</h2>
+        <div class="table-wrap" id="res-ultimas"></div>
+      </div>
+      <div class="panel">
+        <h2>Servicios más solicitados</h2>
+        <div class="table-wrap" id="res-top"></div>
+      </div>
+    </section>
+
+    <!-- ============================= CITAS ============================= -->
+    <section id="tab-citas" class="hidden">
+      <div class="panel" id="cit-form-panel">
+        <h2 id="cit-titulo">Agendar cita</h2>
+        <input type="hidden" id="cit-id" />
+        <div class="row">
+          <div class="field"><label>Cliente</label><select id="cit-cliente"></select></div>
+          <div class="field"><label>Podólogo</label><select id="cit-podologo"></select></div>
+          <div class="field sm"><label>Fecha</label><input type="date" id="cit-fecha" /></div>
+          <div class="field xs"><label>Hora</label><input type="time" id="cit-hora" /></div>
+          <div class="field sm"><label>Estado</label>
+            <select id="cit-estado">
+              <option value="Programada">Programada</option>
+              <option value="Atendida">Atendida</option>
+              <option value="Cancelada">Cancelada</option>
+              <option value="No asistio">No asistió</option>
+            </select>
+          </div>
+          <div class="field"><label>Motivo de la consulta</label><input id="cit-motivo" placeholder="Ej. dolor en uña del pie derecho" /></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="app.guardarCita()">Guardar cita</button>
+          <button class="btn btn-ghost" onclick="app.limpiarCita()">Limpiar</button>
+          <span class="hint" id="cit-nota" style="margin:0"></span>
+        </div>
+        <p class="hint" style="margin-top:10px">Regla R1: un podólogo no puede tener dos citas a la misma fecha y hora.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Agenda de citas</h2>
+        <div class="row no-print" style="margin-bottom:12px">
+          <div class="field sm"><label>Desde</label><input type="date" id="cit-desde" onchange="app.verCitas()" /></div>
+          <div class="field sm"><label>Hasta</label><input type="date" id="cit-hasta" onchange="app.verCitas()" /></div>
+          <div class="field sm"><label>Podólogo</label><select id="cit-fpod" onchange="app.verCitas()"></select></div>
+          <div class="field sm"><label>Estado</label>
+            <select id="cit-festado" onchange="app.verCitas()">
+              <option value="">Todos</option>
+              <option value="Programada">Programada</option>
+              <option value="Atendida">Atendida</option>
+              <option value="Cancelada">Cancelada</option>
+              <option value="No asistio">No asistió</option>
+            </select>
+          </div>
+          <div class="actions" style="margin:0">
+            <button class="btn btn-ghost" onclick="app.citasDeHoy()">Ver solo hoy</button>
+          </div>
+        </div>
+        <div class="table-wrap" id="cit-tabla"></div>
+      </div>
+    </section>
+
+    <!-- ============================ ATENCIÓN ============================ -->
+    <section id="tab-atencion" class="hidden">
+      <div class="panel">
+        <h2>Atención en consultorio</h2>
+        <p class="hint">
+          Elija la cita del día, registre el diagnóstico y agregue los servicios y medicamentos
+          entregados al paciente. La caja verá el monto de inmediato, sin cruzar notas en papel.
+        </p>
+        <div class="row">
+          <div class="field"><label>Cita por atender</label><select id="ate-cita"></select></div>
+          <div class="field sm" style="flex:0 1 auto">
+            <button class="btn btn-primary" onclick="app.abrirAtencion()">Abrir atención</button>
+          </div>
+          <div class="field sm" style="flex:0 1 auto">
+            <button class="btn btn-ghost" onclick="app.buscarAtencionPorId()">Buscar por N.º</button>
+          </div>
+          <div class="field xs"><label>N.º atención</label><input id="ate-buscar" type="number" min="1" placeholder="Ej. 12" /></div>
+        </div>
+      </div>
+      <div id="ate-detalle"></div>
+    </section>
+
+    <!-- ============================== CAJA ============================== -->
+    <section id="tab-caja" class="hidden">
+      <div class="panel">
+        <h2>Por facturar <span class="muted" id="caja-pend-total"></span></h2>
+        <p class="hint">Atenciones ya registradas por el podólogo que aún no tienen boleta (regla R5: siempre existe un cliente válido).</p>
+        <div class="table-wrap" id="caja-pendientes"></div>
+      </div>
+      <div class="panel">
+        <h2>Boletas emitidas</h2>
+        <div class="row no-print" style="margin-bottom:12px">
+          <div class="field sm"><label>Desde</label><input type="date" id="caja-desde" onchange="app.verBoletas()" /></div>
+          <div class="field sm"><label>Hasta</label><input type="date" id="caja-hasta" onchange="app.verBoletas()" /></div>
+          <div class="field sm"><label>Estado</label>
+            <select id="caja-estado" onchange="app.verBoletas()">
+              <option value="">Todas</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Pagada">Pagada</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap" id="caja-boletas"></div>
+      </div>
+    </section>
+
+    <!-- ============================ CLIENTES ============================ -->
+    <section id="tab-clientes" class="hidden">
+      <div class="panel">
+        <h2 id="cli-titulo">Registrar cliente</h2>
+        <input type="hidden" id="cli-id" />
+        <div class="row">
+          <div class="field"><label>Nombres</label><input id="cli-nombres" /></div>
+          <div class="field"><label>Apellido paterno</label><input id="cli-pat" /></div>
+          <div class="field"><label>Apellido materno</label><input id="cli-mat" /></div>
+          <div class="field sm"><label>DNI (8 dígitos)</label><input id="cli-dni" maxlength="8" /></div>
+          <div class="field sm"><label>Teléfono</label><input id="cli-tel" maxlength="15" /></div>
+          <div class="field"><label>Correo</label><input id="cli-email" type="email" /></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="app.guardarCliente()">Guardar cliente</button>
+          <button class="btn btn-ghost" onclick="app.limpiarCliente()">Limpiar</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Pacientes registrados</h2>
+        <div class="row no-print" style="margin-bottom:12px">
+          <div class="field"><label>Buscar por nombre, apellido o DNI</label><input id="cli-buscar" oninput="app.verClientes()" /></div>
+        </div>
+        <div class="table-wrap" id="cli-tabla"></div>
+      </div>
+    </section>
+
+    <!-- ========================== SEGUIMIENTO ========================== -->
+    <section id="tab-seguimiento" class="hidden">
+      <div class="panel">
+        <h2>Seguimiento post-venta (CRM)</h2>
+        <p class="hint">
+          Pacientes que no vuelven hace 30 días o más, o que nunca fueron atendidos.
+          Llámelos para agendar su control preventivo.
+        </p>
+        <div class="row no-print" style="margin-bottom:12px">
+          <div class="field xs"><label>Días sin volver</label><input id="seg-dias" type="number" min="1" value="30" onchange="app.verSeguimiento()" /></div>
+        </div>
+        <div class="table-wrap" id="seg-tabla"></div>
+      </div>
+    </section>
+
+    <!-- =========================== SERVICIOS =========================== -->
+    <section id="tab-servicios" class="hidden">
+      <div class="panel">
+        <h2 id="srv-titulo">Registrar servicio</h2>
+        <input type="hidden" id="srv-id" />
+        <div class="row">
+          <div class="field"><label>Nombre del servicio</label><input id="srv-nombre" /></div>
+          <div class="field"><label>Descripción</label><input id="srv-desc" /></div>
+          <div class="field sm"><label>Precio (S/)</label><input id="srv-precio" type="number" min="0" step="0.01" /></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="app.guardarServicio()">Guardar servicio</button>
+          <button class="btn btn-ghost" onclick="app.limpiarServicio()">Limpiar</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Catálogo de servicios</h2>
+        <div class="table-wrap" id="srv-tabla"></div>
+      </div>
+    </section>
+
+    <!-- ========================= MEDICAMENTOS ========================= -->
+    <section id="tab-medicamentos" class="hidden">
+      <div class="panel">
+        <h2 id="med-titulo">Registrar medicamento</h2>
+        <input type="hidden" id="med-id" />
+        <div class="row">
+          <div class="field"><label>Nombre</label><input id="med-nombre" /></div>
+          <div class="field xs"><label>Stock</label><input id="med-stock" type="number" min="0" /></div>
+          <div class="field sm"><label>Precio (S/)</label><input id="med-precio" type="number" min="0" step="0.01" /></div>
+          <div class="field sm"><label>Vence</label><input id="med-vence" type="date" /></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="app.guardarMedicamento()">Guardar medicamento</button>
+          <button class="btn btn-ghost" onclick="app.limpiarMedicamento()">Limpiar</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Inventario</h2>
+        <p class="hint">El stock se descuenta solo cuando el podólogo lo agrega a una atención y se devuelve si lo quita.</p>
+        <div class="table-wrap" id="med-tabla"></div>
+      </div>
+    </section>
+
+    <!-- ============================ PERSONAL ============================ -->
+    <section id="tab-personal" class="hidden">
+      <div class="panel">
+        <h2 id="pod-titulo">Registrar podólogo</h2>
+        <input type="hidden" id="pod-id" />
+        <div class="row">
+          <div class="field"><label>Nombres</label><input id="pod-nombres" /></div>
+          <div class="field"><label>Apellido paterno</label><input id="pod-pat" /></div>
+          <div class="field"><label>Apellido materno</label><input id="pod-mat" /></div>
+          <div class="field"><label>Especialidad</label><input id="pod-esp" /></div>
+          <div class="field sm"><label>Teléfono</label><input id="pod-tel" maxlength="15" /></div>
+          <div class="field"><label>Correo</label><input id="pod-email" type="email" /></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="app.guardarPodologo()">Guardar podólogo</button>
+          <button class="btn btn-ghost" onclick="app.limpiarPodologo()">Limpiar</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Podólogos</h2>
+        <div class="table-wrap" id="pod-tabla"></div>
+      </div>
+
+      <div class="panel">
+        <h2 id="rec-titulo">Registrar recepcionista</h2>
+        <input type="hidden" id="rec-id" />
+        <div class="row">
+          <div class="field"><label>Nombres</label><input id="rec-nombres" /></div>
+          <div class="field"><label>Apellidos</label><input id="rec-apellidos" /></div>
+          <div class="field sm"><label>Teléfono</label><input id="rec-tel" maxlength="15" /></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="app.guardarRecepcionista()">Guardar recepcionista</button>
+          <button class="btn btn-ghost" onclick="app.limpiarRecepcionista()">Limpiar</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Recepcionistas (counter)</h2>
+        <div class="table-wrap" id="rec-tabla"></div>
+      </div>
+    </section>
+
+    <!-- ============================ USUARIOS ============================ -->
+    <section id="tab-usuarios" class="hidden">
+      <div class="panel">
+        <h2 id="usu-titulo">Crear usuario del sistema</h2>
+        <p class="hint">
+          Regla R3: el rol define qué ve cada persona. Las credenciales son únicas y no se transfieren.
+          La contraseña se guarda cifrada (PBKDF2-SHA256), nunca en texto plano.
+        </p>
+        <input type="hidden" id="usu-id" />
+        <div class="row">
+          <div class="field sm"><label>Usuario</label><input id="usu-usuario" /></div>
+          <div class="field"><label>Nombre completo</label><input id="usu-nombres" /></div>
+          <div class="field sm"><label>Rol</label>
+            <select id="usu-rol" onchange="app.cambiarRolFormulario()">
+              <option value="Administrador">Administrador</option>
+              <option value="Recepcionista">Recepcionista</option>
+              <option value="Podologo">Podólogo</option>
+            </select>
+          </div>
+          <div class="field" id="usu-campo-pod">
+            <label>Podólogo vinculado</label><select id="usu-podologo"></select>
+          </div>
+          <div class="field hidden" id="usu-campo-rec">
+            <label>Recepcionista vinculado</label><select id="usu-recep"></select>
+          </div>
+          <div class="field sm" id="usu-campo-clave">
+            <label>Contraseña</label><input id="usu-clave" type="password" autocomplete="new-password" />
+          </div>
+          <div class="field xs"><label>Activo</label>
+            <select id="usu-activo"><option value="1">Sí</option><option value="0">No</option></select>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="app.guardarUsuario()">Guardar usuario</button>
+          <button class="btn btn-ghost" onclick="app.limpiarUsuario()">Limpiar</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Usuarios del sistema</h2>
+        <div class="table-wrap" id="usu-tabla"></div>
+      </div>
+    </section>
+
+    <!-- =========================== AUDITORÍA =========================== -->
+    <section id="tab-auditoria" class="hidden">
+      <div class="panel">
+        <h2>Auditoría del sistema</h2>
+        <p class="hint">Regla R3: solo el Administrador puede ver estos registros. Se guarda quién entra, quién modifica y quién cobra.</p>
+        <div class="row no-print" style="margin-bottom:12px">
+          <div class="field sm"><label>Acción</label>
+            <select id="aud-accion" onchange="app.verAuditoria()">
+              <option value="">Todas</option>
+              <option value="LOGIN">Ingreso correcto</option>
+              <option value="LOGIN_FALLIDO">Intento fallido</option>
+              <option value="LOGOUT">Salida</option>
+              <option value="INSERT">Altas</option>
+              <option value="UPDATE">Cambios</option>
+              <option value="DELETE">Bajas</option>
+              <option value="COBRO">Cobros</option>
+            </select>
+          </div>
+          <div class="field sm"><label>Usuario</label><input id="aud-usuario" oninput="app.verAuditoria()" /></div>
+          <div class="field sm"><label>Desde</label><input type="date" id="aud-desde" onchange="app.verAuditoria()" /></div>
+          <div class="field sm"><label>Hasta</label><input type="date" id="aud-hasta" onchange="app.verAuditoria()" /></div>
+        </div>
+        <div class="table-wrap" id="aud-tabla"></div>
+      </div>
+    </section>
+
+    <!-- ======================= COPIA DE SEGURIDAD ======================= -->
+    <section id="tab-respaldo" class="hidden">
+      <div class="panel">
+        <h2>Descargar una copia</h2>
+        <p class="hint">
+          El <strong>Excel</strong> lleva una hoja por tabla (con el nombre exacto de la tabla) y una
+          primera hoja de instrucciones y restricciones. El <strong>JSON</strong> es el mismo contenido
+          en texto, para reimportarlo tal cual. Las contraseñas nunca se incluyen.
+        </p>
+        <div class="actions">
+          <a class="btn btn-primary" href="/api/respaldo/excel">Descargar Excel (.xlsx)</a>
+          <a class="btn btn-ghost" href="/api/respaldo/json">Descargar JSON</a>
+          <button class="btn btn-ghost" onclick="app.verRespaldo()">Actualizar conteo</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Contenido actual de la base</h2>
+        <div class="table-wrap" id="res-tablas"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Importar datos</h2>
+        <p class="hint">
+          Se <strong>agrega lo que falta</strong> y se <strong>actualiza lo que coincide</strong> por su
+          clave natural (DNI, correo, nombre del servicio...). Nunca se borra nada. Las hojas
+          <em>USUARIO</em> y <em>AUDITORIA</em> se ignoran: son de solo consulta.
+        </p>
+        <div class="row">
+          <div class="field"><label>Archivo Excel (.xlsx)</label>
+            <input type="file" id="res-archivo-excel" accept=".xlsx" /></div>
+          <div class="field sm" style="flex:0 1 auto">
+            <button class="btn btn-ok" onclick="app.importarRespaldo('excel')">Importar Excel</button>
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div class="field"><label>Archivo JSON (.json)</label>
+            <input type="file" id="res-archivo-json" accept=".json,application/json" /></div>
+          <div class="field sm" style="flex:0 1 auto">
+            <button class="btn btn-ok" onclick="app.importarRespaldo('json')">Importar JSON</button>
+          </div>
+        </div>
+        <div id="res-resultado" style="margin-top:16px"></div>
+      </div>
+    </section>
+
+    <footer class="note">Sistema local — los datos se guardan en SQL Server (SQLData_ClinicaPodologicaV2).</footer>
+  </main>
+
+  <div id="modal"></div>
+  <div id="mensajes"></div>
+
+  <script type="module" src="/estatico/js/app.js"></script>
+</body>
+</html>
