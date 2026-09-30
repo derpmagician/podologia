@@ -69,10 +69,14 @@ En la raíz solo queda la pantalla principal; todo lo demás vive en servidor/.
                             medicamentos, citas, atenciones, boletas, pagos y
                             los 3 usuarios).
 
-Por qué está ordenado así: cada capa solo depende de la de abajo. Una ruta
-(api/rutas/) recibe la petición y llama al dominio; el dominio aplica las
-reglas y usa datos/ para consultar. Cambiar una regla del negocio es tocar un
-solo archivo de dominio/, no varios endpoints.
+Por qué está ordenado así: las rutas (api/rutas/) reciben la petición,
+validan la entrada y responden. La mayoría contiene su propio SQL y consulta
+con datos/ directamente; solo las operaciones con reglas de negocio (citas,
+atenciones y boletas) pasan por dominio/. Cambiar una de esas reglas es
+tocar un solo archivo de dominio/, no varios endpoints.
+
+nucleo/ lo comparten todas las capas, con una excepción hacia abajo:
+nucleo/auditoria.py escribe en la base usando datos/.
 
 
 REQUISITOS
@@ -194,9 +198,13 @@ Usuarios y roles          sí             no            no
 Auditoría                 sí             no            no
 Copia de seguridad        sí             no            no
 
-Los permisos se validan en el servidor: si alguien escribe la dirección de un
-módulo que no le corresponde, la API responde 403 y deja constancia en la
-auditoría.
+La tabla describe las pestañas que ve cada rol en la interfaz. En la API los
+permisos se validan en el servidor (api/servidor.py): si alguien llama a una
+ruta que no le corresponde, la API responde 403 y deja constancia en la
+auditoría con la acción LOGIN_FALLIDO sobre la tabla API. Las lecturas de
+catálogos (clientes, servicios, medicamentos, atenciones) están abiertas a
+todos los roles autenticados; las restricciones por rol aplican sobre todo a
+las escrituras.
 
 
 EL FLUJO DE ATENCIÓN
@@ -222,10 +230,14 @@ R2  Los pagos de una boleta no pueden superar su importe. La boleta pasa a
     "Pagada" solo cuando la suma de pagos iguala el importe.
     -> servidor/dominio/facturacion.py, dentro de la transacción (UPDLOCK).
 
-R3  Solo el Administrador ve auditoría y usuarios. El Recepcionista solo
-    inserta y lee clientes y citas.
-    -> servidor/nucleo/permisos.py; cada ruta declara sus roles y el servidor
-       responde 403.
+R3  Solo el Administrador ve auditoría, usuarios y copias de seguridad. Las
+    escrituras se restringen por rol; las lecturas de catálogos están
+    abiertas a todos los roles autenticados (el podólogo puede leer
+    clientes, servicios y medicamentos; la recepcionista puede leer
+    atenciones y también eliminar citas).
+    -> Cada ruta declara sus roles en el decorador @ruta con las tuplas de
+       servidor/nucleo/permisos.py, y es servidor/api/servidor.py quien
+       responde 403 cuando el rol no alcanza.
 
 R4  Una boleta pagada y cerrada no se modifica ni se elimina.
     -> servidor/dominio/facturacion.py + trigger TR_BOLETA_NoEliminarPagada.
@@ -269,7 +281,9 @@ Al importar, el sistema:
   - Reengancha solo las tablas hijas: el Id de cada cita, atención, boleta o
     pago del archivo se traduce al Id que le toca en esta base.
   - Respeta las reglas: no toca una boleta pagada (R4) ni una atención ya
-    facturada, y recalcula el estado de pago según los pagos (R2).
+    facturada, y recalcula el estado de pago según los pagos (R2). Estas
+    comprobaciones están reimplementadas dentro de respaldos.py (no importa
+    dominio/), para que la importación sea autocontenida.
   - Ignora las hojas USUARIO y AUDITORIA. Las contraseñas no se exportan
     nunca; los usuarios se crean en el módulo "Usuarios y roles".
 
@@ -301,6 +315,10 @@ POD_DRIVER     driver ODBC                   (ODBC Driver 17 for SQL Server)
 POD_PUERTO     puerto del servidor web       (8766)
 POD_USUARIO    usuario de SQL Server         (si no usa autenticación Windows)
 POD_CLAVE      contraseña de SQL Server
+
+Las variables de conexión (POD_SERVIDOR, POD_BASE, POD_DRIVER, POD_USUARIO y
+POD_CLAVE) las lee datos/conexion.py directamente al importarse. El módulo
+config.py concentra las rutas de archivos, el puerto y las constantes.
 
 
 SI ALGO FALLA
